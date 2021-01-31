@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Paige - D3.js Force-Directed Graph with Labels</title>
+<style>
+    .links line {
+        stroke: #999;
+        stroke-opacity: 0.6;
+    }
+
+    .nodes circle {
+        stroke: #fff;
+        stroke-width: 1.5px;
+        z-index: 2;
+    }
+
+    text {
+        font-family: sans-serif;
+        font-size: 16px;
+        z-index: 1;
+    }
+</style>
+
+
+<svg width="1000" height="1000"></svg>
+
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+
+    var svg = d3.select("svg"),
+        width = +svg.attr("width"),
+        height = +svg.attr("height");
+
+    var color = d3.scaleOrdinal(d3.schemeCategory20);
+
+    var simulation = d3.forceSimulation()
+        .force("link", d3.forceLink()
+            .id(function (d) { return d.id; })
+            .distance(function (d, i) {
+                return (1 / d.value ** 3 * 50);
+            })
+        )
+        .force("charge", d3.forceManyBody())
+        .force("center", d3.forceCenter(width / 2, height / 2));
+
+    d3.json("tea.json", function (error, graph) {
+        if (error) throw error;
+
+        var link = svg.append("g")
+            .attr("class", "links")
+            .selectAll("line")
+            .data(graph.links)
+            .enter()
+            .append("line")
+            .attr("stroke-width", 1);
+
+        var node = svg.append("g")
+            .attr("class", "nodes")
+            .selectAll("g")
+            .data(graph.nodes)
+            .enter().append("g")
+
+        node
+            .on('mouseover', function (d) {
+                get_neighbors(d);
+            })
+            .on('mouseout', function (d) {
+                revert_formatting(circles);
+            });
+
+        var circles = node.append("circle")
+            .attr("r", 8)
+            .attr("fill", function (d) { return color(d.group); })
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        var labels = node.append("text")
+            .text(function (d) {
+                return d.id;
+            })
+            .attr('x', 8)
+            .attr('y', 3);
+
+        node.append("title")
+            .text(function (d) { return d.id; });
+
+        simulation
+            .nodes(graph.nodes)
+            .on("tick", ticked);
+
+        simulation.force("link")
+            .links(graph.links);
+
+        function ticked() {
+            link
+                .attr("x1", function (d) { return d.source.x; })
+                .attr("y1", function (d) { return d.source.y; })
+                .attr("x2", function (d) { return d.target.x; })
+                .attr("y2", function (d) { return d.target.y; });
+
+            node
+                .attr("transform", function (d) {
+                    return "translate(" + d.x + "," + d.y + ")";
+                })
+        }
+
+        // create object or function for calling the related nodes
+        function get_neighbors(node) {
+            var neighbors = new Set()
+            link.each(function (link) {
+                if ((link.source.id === node.id) || (link.target.id === node.id)) {
+                    neighbors.add(link.source.id);
+                    neighbors.add(link.target.id);
+                };
+            })
+            // format circle
+            circles.each(function (circle) {
+                if (neighbors.has(circle.id)) {
+                    d3.select(this)
+                        .style('stroke', '#90ee90')
+                } else {
+                    d3.select(this).style('opacity','.2')
+                };
+            })
+            // format label
+            labels.each(function (label) {
+                if (neighbors.has(label.id)) {
+                    d3.select(this).style('opacity', '1');
+                } else {
+                    d3.select(this).style('opacity', '.1');
+                }
+            })
+            // format links
+            link.each(function (link) {
+                if ((link.source.id === node.id) || (link.target.id === node.id)) {
+                    d3.select(this)
+                        .style('stroke-width', '3')
+                        .style('stroke', '#90ee90')
+                        .style('stroke-opacity', '1');
+                } else {
+                    d3.select(this)
+                        .style('stroke-opacity', '.2');
+                }
+            })
+        }
+
+        function revert_formatting(circles) {
+            // re-format circles
+            circles.each(function (circle) {
+                d3.select(this)
+                    .style("fill", function (d) { return color(d.group); })
+                    .style('stroke', 'white')
+                    .style('opacity','1');;
+            })
+            // re-format labels
+            labels.each(function (label) {
+                d3.select(this).style('opacity', '1')
+            })
+            // re-format links
+            link.each(function (link) {
+                d3.select(this)
+                    .style('stroke', '#999')
+                    .style('stroke-opacity', '.6')
+                    .style('stroke-width', '1')
+            })
+        };
+    });
+
+    function dragstarted(d) {
+        if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+
+    function dragged(d) {
+        d.fx = d3.event.x;
+        d.fy = d3.event.y;
+    }
+
+    function dragended(d) {
+        if (!d3.event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+
+</script>
