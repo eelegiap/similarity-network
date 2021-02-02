@@ -41,6 +41,15 @@
     div span span {
         font-weight: normal;
     }
+
+    .active {
+        text-decoration: underline;
+        font-size: 24px;
+    }
+
+    .inactive {
+        font-size: 14px;        
+    }
 </style>
 
 <body>
@@ -118,17 +127,22 @@
                     .attr("stroke-width", 1);
 
                 var node = svg.append("g")
-                    .attr("class", "nodes")
                     .selectAll("g")
                     .data(graph.nodes)
-                    .enter().append("g")
+                    .enter()
+                    .append("g")
+                    .attr("class", function (d) {
+                        return "nodes " + d.id;
+                    });
 
                 d3.select('#wordlist')
                     .selectAll('span')
                     .data(similarities)
                     .enter()
                     .append('span')
-                    .attr('class', 'block')
+                    .attr('class', function (d) {
+                        return 'block ' + d.form;
+                    })
                     .text(function (d) {
                         return d.sim + ': ' + d.form;
                     })
@@ -149,6 +163,7 @@
                     .on('mouseover', function (d) {
                         get_neighbors(d);
                         get_info(d);
+                        highlight_word(d);
                     })
                     .on('mouseout', function (d) {
                         revert_formatting(circles);
@@ -201,6 +216,19 @@
                         .attr("transform", function (d) {
                             return "translate(" + d.x + "," + d.y + ")";
                         })
+                }
+                // highlight word in list
+                function highlight_word(d) {
+                    node.each(function (node) {
+                        if (node.id === d.id) {
+                            var classed = d3.select(this).attr('class');
+                            var classes = classed.split(' ')
+                            console.log(classes[1]);
+                            d3.selectAll('.' + classes[1]).each(function (c) {
+                                d3.select(this).classed('active', true).classed('inactive',false)
+                            });
+                        }
+                    })
                 }
 
                 // fill information box top right
@@ -285,6 +313,9 @@
                             .style('stroke-opacity', '.6')
                             .style('stroke-width', '1')
                     })
+                    // format text classes 
+                    node.classed('active', false).classed('inactive', true);
+                    d3.selectAll('.block').classed('active',false).classed('inactive',true)
                 };
             });
         });
