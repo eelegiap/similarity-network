@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
-<title>Paige - D3.js Force-Directed Graph with Labels</title>
+<title>ЧАЙ - Similarity Network</title>
 <style>
     .links line {
         stroke: #999;
@@ -18,10 +18,26 @@
         font-size: 16px;
         z-index: 1;
     }
+    h1, p {
+        padding-left: 50px;
+    }
+    p {
+        padding-right: 200px;
+    }
 </style>
 
-
-<svg width="1000" height="1000"></svg>
+<h1>similarity network on чай</h1>
+<p>This network features all of the words with >0.5 cosine similarity with "чай" based on the 
+    <a href='https://github.com/natasha/navec'>Navec GloVe vectors</a>.
+    <b>The links between words are only shown if the similarity between them is >0.5.</b>
+    (Although of course, there are similarity values between 0 and 1 for all vector pairs, but only some of them
+    are shown).
+    Nodes are colored by part of speech, and link lengths are determined by the inverse of similarity score. 
+    <b>Closer vectors on the canvas are semantically closer in the word embedding space.</b>
+    (Longer lines correspond with more semantically distant vectors). Mousing over a node will highlight
+    all of the other nodes with >0.5 similarity.
+</p>
+<svg width="1000" height="800"></svg>
 
 
 <script src="https://d3js.org/d3.v4.min.js"></script>
@@ -121,7 +137,7 @@
                     d3.select(this)
                         .style('stroke', '#90ee90')
                 } else {
-                    d3.select(this).style('opacity','.2')
+                    d3.select(this).style('opacity', '.2')
                 };
             })
             // format label
@@ -152,7 +168,7 @@
                 d3.select(this)
                     .style("fill", function (d) { return color(d.group); })
                     .style('stroke', 'white')
-                    .style('opacity','1');;
+                    .style('opacity', '1');;
             })
             // re-format labels
             labels.each(function (label) {
