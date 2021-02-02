@@ -1,4 +1,11 @@
 <!DOCTYPE html>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+<!-- jQuery library -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<!-- Latest compiled JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
 <meta charset="utf-8">
 <title>ЧАЙ - Similarity Network</title>
 <style>
@@ -15,30 +22,56 @@
 
     text {
         font-family: sans-serif;
-        font-size: 16px;
+        font-size: 18px;
         z-index: 1;
     }
-    h1, p {
-        padding-left: 50px;
-    }
+
     p {
         padding-right: 200px;
     }
+    .bold {
+        font-weight: bold;
+    }
+    div span span {
+        font-weight: normal;
+    }
+
 </style>
-
-<h1>similarity network on чай</h1>
-<p>This network features all of the words with >0.5 cosine similarity with "чай" based on the 
-    <a href='https://github.com/natasha/navec'>Navec GloVe vectors</a>.
-    <b>The links between words are only shown if the similarity between them is >0.5.</b>
-    (Although of course, there are similarity values between 0 and 1 for all vector pairs, but only some of them
-    are shown).
-    Nodes are colored by part of speech, and link lengths are determined by the inverse of similarity score. 
-    <b>In general, closer vectors on the canvas are semantically closer in the word embedding space.</b>
-    (Longer links correspond with more semantically distant vectors). Mousing over a node will highlight
-    all of the other nodes with >0.5 similarity.
-</p>
-<svg width="1000" height="800"></svg>
-
+<body>
+<div class='container'>
+    <div class='row'>
+        <div class='col-md-12'>
+            <h1>similarity network on чай</h1>
+            <p>This network features all of the words with >0.5 cosine similarity with "чай" based on the
+                <a href='https://github.com/natasha/navec'>Navec GloVe vectors</a>.
+                <b>The links between words are only shown if the similarity between them is >0.5.</b>
+                (Although of course, there are similarity values between 0 and 1 for all vector pairs, but only some of them
+                are shown).
+                Nodes are colored by part of speech, and link lengths are determined by the inverse of similarity score.
+                <b>In general, closer vectors on the canvas are semantically closer in the word embedding space.</b>
+                (Longer links correspond with more semantically distant vectors). Mousing over a node will highlight
+                all of the other nodes with >0.5 similarity.
+            </p>
+        </div>
+    </div>
+    <div class='row'>
+        <div class='col-md-9'></div>
+        <div class='col-md-3'>
+            <span class='bold'>Form: <span id='form'></span></span><br>
+            <span class='bold'>Part of speech: <span id='pos'></span></span><br>
+            <span class='bold'>Type: <span id='type'></span></span><br>
+            <span class='bold'>Level: <span id='level'></span></span><br>
+            <span class='bold'>Translation: <span id='translation'></span></span><br>
+            <span><span id=''></span></span><br>
+        </div>
+    </div>
+    <div class='row'>
+        <div class ='col-md-12'>
+            <svg width="1000" height="600"></svg>
+        </div>
+    </div>
+</div>
+</body>
 
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script>
@@ -60,129 +93,147 @@
         .force("center", d3.forceCenter(width / 2, height / 2));
 
     d3.json("tea.json", function (error, graph) {
-        if (error) throw error;
+        d3.json('tea_forms.json', function (form_data) {
+            if (error) throw error;
 
-        var link = svg.append("g")
-            .attr("class", "links")
-            .selectAll("line")
-            .data(graph.links)
-            .enter()
-            .append("line")
-            .attr("stroke-width", 1);
+            var link = svg.append("g")
+                .attr("class", "links")
+                .selectAll("line")
+                .data(graph.links)
+                .enter()
+                .append("line")
+                .attr("stroke-width", 1);
 
-        var node = svg.append("g")
-            .attr("class", "nodes")
-            .selectAll("g")
-            .data(graph.nodes)
-            .enter().append("g")
+            var node = svg.append("g")
+                .attr("class", "nodes")
+                .selectAll("g")
+                .data(graph.nodes)
+                .enter().append("g")
 
-        node
-            .on('mouseover', function (d) {
-                get_neighbors(d);
-            })
-            .on('mouseout', function (d) {
-                revert_formatting(circles);
-            });
-
-        var circles = node.append("circle")
-            .attr("r", 8)
-            .attr("fill", function (d) { return color(d.group); })
-            .call(d3.drag()
-                .on("start", dragstarted)
-                .on("drag", dragged)
-                .on("end", dragended));
-
-        var labels = node.append("text")
-            .text(function (d) {
-                return d.id;
-            })
-            .attr('x', 8)
-            .attr('y', 3);
-
-        node.append("title")
-            .text(function (d) { return d.id; });
-
-        simulation
-            .nodes(graph.nodes)
-            .on("tick", ticked);
-
-        simulation.force("link")
-            .links(graph.links);
-
-        function ticked() {
-            link
-                .attr("x1", function (d) { return d.source.x; })
-                .attr("y1", function (d) { return d.source.y; })
-                .attr("x2", function (d) { return d.target.x; })
-                .attr("y2", function (d) { return d.target.y; });
-
+            // on mouseover and mouseout
             node
-                .attr("transform", function (d) {
-                    return "translate(" + d.x + "," + d.y + ")";
+                .on('mouseover', function (d) {
+                    get_neighbors(d);
+                    get_info(d);
                 })
-        }
+                .on('mouseout', function (d) {
+                    revert_formatting(circles);
+                });
 
-        // create object or function for calling the related nodes
-        function get_neighbors(node) {
-            var neighbors = new Set()
-            link.each(function (link) {
-                if ((link.source.id === node.id) || (link.target.id === node.id)) {
-                    neighbors.add(link.source.id);
-                    neighbors.add(link.target.id);
-                };
-            })
-            // format circle
-            circles.each(function (circle) {
-                if (neighbors.has(circle.id)) {
-                    d3.select(this)
-                        .style('stroke', '#90ee90')
-                } else {
-                    d3.select(this).style('opacity', '.2')
-                };
-            })
-            // format label
-            labels.each(function (label) {
-                if (neighbors.has(label.id)) {
-                    d3.select(this).style('opacity', '1');
-                } else {
-                    d3.select(this).style('opacity', '.1');
-                }
-            })
-            // format links
-            link.each(function (link) {
-                if ((link.source.id === node.id) || (link.target.id === node.id)) {
-                    d3.select(this)
-                        .style('stroke-width', '3')
-                        .style('stroke', '#90ee90')
-                        .style('stroke-opacity', '1');
-                } else {
-                    d3.select(this)
-                        .style('stroke-opacity', '.2');
-                }
-            })
-        }
+            var circles = node.append("circle")
+                .attr("r", 12)
+                .attr("fill", function (d) { return color(d.group); })
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended));
 
-        function revert_formatting(circles) {
-            // re-format circles
-            circles.each(function (circle) {
-                d3.select(this)
-                    .style("fill", function (d) { return color(d.group); })
-                    .style('stroke', 'white')
-                    .style('opacity', '1');;
-            })
-            // re-format labels
-            labels.each(function (label) {
-                d3.select(this).style('opacity', '1')
-            })
-            // re-format links
-            link.each(function (link) {
-                d3.select(this)
-                    .style('stroke', '#999')
-                    .style('stroke-opacity', '.6')
-                    .style('stroke-width', '1')
-            })
-        };
-    });
+            var labels = node.append("text")
+                .text(function (d) {
+                    return d.id;
+                })
+                .attr('x', 12)
+                .attr('y', 3);
+
+            node.append("title")
+                .text(function (d) { return d.id; });
+
+            simulation
+                .nodes(graph.nodes)
+                .on("tick", ticked);
+
+            simulation.force("link")
+                .links(graph.links);
+
+            function ticked() {
+                link
+                    .attr("x1", function (d) { return d.source.x; })
+                    .attr("y1", function (d) { return d.source.y; })
+                    .attr("x2", function (d) { return d.target.x; })
+                    .attr("y2", function (d) { return d.target.y; });
+
+                node
+                    .attr("transform", function (d) {
+                        return "translate(" + d.x + "," + d.y + ")";
+                    })
+            }
+
+            // fill information box top right
+            function get_info(node) {
+                form_data.forEach(entry => {
+                    if (entry.form.form == node.id) {
+                        $('#form').text(node.id);
+                        $('#pos').text(entry.lemma.pos);
+                        $('#type').text(entry.form.type);
+                        $('#level').text(entry.lemma.level);
+                        $('#translation').text(entry.lemma.translation);
+                    }
+                });
+            };
+
+            // create object or function for calling the related nodes
+            function get_neighbors(node) {
+                var neighbors = new Set()
+                link.each(function (link) {
+                    if ((link.source.id === node.id) || (link.target.id === node.id)) {
+                        neighbors.add(link.source.id);
+                        neighbors.add(link.target.id);
+                    };
+                })
+                // format circle
+                circles.each(function (circle) {
+                    if (neighbors.has(circle.id)) {
+                        d3.select(this)
+                            .style('stroke', '#90ee90')
+                    } else {
+                        d3.select(this).style('opacity', '.2')
+                    };
+                })
+                // format label
+                labels.each(function (label) {
+                    if (neighbors.has(label.id)) {
+                        d3.select(this).style('opacity', '1');
+                    } else {
+                        d3.select(this).style('opacity', '.1');
+                    }
+                })
+                // format links
+                link.each(function (link) {
+                    if ((link.source.id === node.id) || (link.target.id === node.id)) {
+                        d3.select(this)
+                            .style('stroke-width', '3')
+                            .style('stroke', '#90ee90')
+                            .style('stroke-opacity', '1');
+                    } else {
+                        d3.select(this)
+                            .style('stroke-opacity', '.2');
+                    }
+                })
+            }
+
+            function revert_formatting(circles) {
+                // re-format circles
+                circles.each(function (circle) {
+                    d3.select(this)
+                        .style("fill", function (d) { return color(d.group); })
+                        .style('stroke', 'white')
+                        .style('opacity', '1');;
+                })
+                // re-format labels
+                labels.each(function (label) {
+                    d3.select(this).style('opacity', '1')
+                })
+                // re-format links
+                link.each(function (link) {
+                    d3.select(this)
+                        .style('stroke', '#999')
+                        .style('stroke-opacity', '.6')
+                        .style('stroke-width', '1')
+                })
+            };
+        });
+    })
+
 
     function dragstarted(d) {
         if (!d3.event.active) simulation.alphaTarget(0.3).restart();
